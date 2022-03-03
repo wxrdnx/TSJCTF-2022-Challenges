@@ -13,13 +13,13 @@ NOTE: `on10n.exe` is not a real malware. So don't worry :)
 (.exe (.cs (.docm (.vb (.ps1 (.bin (.pdf (.js))))))))
 ```
 
-# Solution
+## Solution
 
 **Disclaimer: This challenge is probably the worst in this CTF. It is too lengthy, buggy, and contains lots of guessing. I should've added `CSC` tag to this challenge**
 
 This is a hodgepodge reverse challenge that I made to test different reverse engineering skills. The executable is wrapped with layers of hidden files, and the goal is to extract them one by one.
 
-## Stage 1
+### Stage 1
 
 First, open the `on10n.exe`, and it will pop up a message box that says `Nope`
 
@@ -138,7 +138,7 @@ ResGen.exe C:\Users\user\Desktop\on10n.Properties.Resources.resources C:\Users\u
 Finally, extract the base64 string from `on10n.resx`, decode it, and xor it with `NantouPoliceOfficeBureau`. Here's the [C# code](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage1/extract_resource.cs):
 
 
-## Stage 2
+### Stage 2
 
 Next, we now contain a `.docm` file. And if we run the file, we'll notice that there are lots of numbers in the document. Furthermore, it pops up a message box after the document is open:
 
@@ -287,7 +287,7 @@ with open('challenge.ps1', 'w') as f:
 
 ```
 
-## Step 3
+### Stage 3
 
 ```powershell
 ºöÚmß%çÊúe#Ô SYStem.IO.CoMPrESsion.deFLATeStreAm( [SystEm.IO.MEMoRysTREAM][cOnvErt]::froMBase64STRiNg(...),
@@ -379,7 +379,7 @@ Result:
 ```
 "\x89\xe5\x64\x8b\x1d\x30\x00\x00\x00\x8b\x5b\x0c\x8b\x5b\x14\x8b\x1b..."
 ```
-## Step 4
+### Stage 4
 
 Now, we obtain the shellcode. Let's embed this shellcode in a [C file](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage4/shellcode.c), compile it, and analyze it.
 
@@ -508,7 +508,7 @@ endobj
 
 Like the hint says, it produces a pdf file.
 
-## Step 5
+### Stage 5
 
 The last step is to open the [pdf](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage4/challenge.pdf) directly. If you open the pdf file (with pdf readers that support javascript):
 

@@ -21,9 +21,9 @@ So the first thing to do is unpack the binary:
 ```bash
 upx -d encoder.exe
 ```
-2. Now, if you throw the executable into disassemblers like IDA or Ghidra, you may notice that it is stripped, so it is extremely hard to analyze the binary.
+Now, if you throw the executable into disassemblers like IDA or Ghidra, you may discover that it is stripped, so it is extremely hard to analyze the binary.
 
-Nonetheless, if you notice the *file lengths* of these encrypted files, you will notice that the greatest common factor of these file lengths is 16! This means that this malware howler is probably using block cipher instead of stream cipher or public-key cryptography.
+Nonetheless, if you notice the *file lengths* of these encrypted files, you'll probably realize that the greatest common factor of these file lengths is 16! This means that this malware is probably using block cipher instead of stream cipher or public-key cryptography.
 
 You don't need to delve into the code directly. Instead, let's use some crypto hunting tools to find out the encryption scheme. Personally, I use the [cryfind](https://github.com/oalieno/cryfind.git) to analyze cryptography signatures in the binary.
 
@@ -52,10 +52,9 @@ This is the result:
 
 Now, we can narrow down the possibilities to three potential candidates: AES, RC5, and RC6. (However, we must be aware that there may be false positives or false negatives, so we still have to use debuggers and disassemblers to understand the in-depth situation.) 
 
-## Static Analysis
+### Static Analysis
 
 Next, Let's analyze the malware statically (using IDA) and dynamically (using Windbg). I'll omit the trial and error parts. In short, the malware roughly does the following things:
-
 
 1. Check whether the directory satisfies some restrictions
 2. Directory traversal and store files in the vector
@@ -107,13 +106,13 @@ What's more, the function is called only twice (one for the key and another for 
 
 ![](https://i.imgur.com/tod2QC3.png)
 
-From now on, we can boldly guess that `0x4031f0` is the function that generates key and iv. Furthermore, it's fair to speculate that `0x86fad0` is the random number generator object.
+From now on, we can boldly guess that `0x4031f0` is the function which generates key and iv. Furthermore, it's fair to speculate that `0x86fad0` is the random number generator object.
 
 ### Obtain the key and iv
 
 Yet, how do we obtain the key and iv?
 
-Well, it is quite obvious that they both are local variables, so they should be found on the stack. What's more, they are both variables inside the `main` function, so they will not be washed away until the end of the program.
+Well, it is quite conspicuous that they're both local variables, so they should be found on the stack. What's more, they are both variables inside the `main` function, so they will not be washed away until the end of the program.
 
 The way to extract the values from the dump file is to first find out the `rbp` when the `main` function executes. After that, we can simply calculate the offset and read the values out.
 
@@ -194,8 +193,6 @@ Clearly, only `RC6` with `CBC` mode produces texts that make sense.
 
 In other words, we have high confidence that the malware is using RC6 CBC mode, so we can finally write a [decryptor](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/w4nn4cryp7/code/decryptor.cpp) that decrypts the whole filesystem.
 
-See `decryptor.cpp` for the full code.
-
 ```powershell
 PS C:\Users\user\Downloads\w4nn4cryp7\w4nn4cryp7> .\decryptor.exe
 "infected_C_drive\\C\\Program Files\\Common Files\\System\\ADO\\msado15.dll" Done.
@@ -236,7 +233,7 @@ PS C:\Users\user\Downloads\w4nn4cryp7\w4nn4cryp7> .\decryptor.exe
 "infected_C_drive\\C\\Users\\TSJ\\Music\\YOASOBI癟??疇簫?癟??癟??Official Music Video.wav"
 ```
 
-Eventually, you'll find the flag at `.\infected_C_drive\C\Users\TSJ\Desktop\teaching\Introduction to Penetration Testing\CH4 Metasploit.txt`.
+Eventually, you'll find the flag at `.\infected_C_drive\C\Users\TSJ\Desktop\teaching\Introduction to Penetration Testing\CH4 Metasploit.txt`. (After getting Rick-rolled for a while XP)
 
 ## Flag
 
