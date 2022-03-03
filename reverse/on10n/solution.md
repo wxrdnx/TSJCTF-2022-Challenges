@@ -373,25 +373,7 @@ Consequently, we figure out that `${Accum}` equals `0x38`.
 
 Moving on, notice that at line 21 ~ 23, `${Shellcode}` is XORed with this fixed value, so XORing back the shellcode array with `0x38` helps you procure the real shellcode!
 
-Write a [Python script](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage3/generate_shellcode.py) that generates the hidden shellcode:
-
-```python=
-shellcode = [...]
-for i in range(len(shellcode)):
-    shellcode[i] = shellcode[i] ^ 0x38
-
-shellcode = ''.join(chr(x) for x in shellcode)
-shellcode_repr = ''
-
-shellcode_repr += '"'
-for char in shellcode:
-    shellcode_repr += '\\x'
-    shellcode_repr += '{:02x}'.format(ord(char))
-
-shellcode_repr += '"'
-with open('shellcode.bin', 'w') as f:
-    f.write(shellcode_repr)
-```
+Write a [Python script](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage3/generate_shellcode.py) that generates the hidden shellcode.
 
 Result:
 ```
@@ -399,7 +381,7 @@ Result:
 ```
 ## Step 4
 
-Now, we obtain the shellcode. Let's embed this shellcode in a [C file](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/step4/shellcode.c), compile it, and analyze it.
+Now, we obtain the shellcode. Let's embed this shellcode in a [C file](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage4/shellcode.c), compile it, and analyze it.
 
 ```c
 #include <stdio.h>
@@ -501,24 +483,7 @@ push val
 ...
 ```
 
-Apparently, these lines of code is reversible. Thus, we can write a short [Python script](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/step4/generate_pdf.py) that produces these mysterious values:
-
-```python
-ebx = 0
-ebp = 0x1a67ad25
-nums = [0x1a21e260, 0x3f04e859, 0xf30db6b, 0x556be19, 0x7d22cc78, 0x951c646, ...]
-vals = []
-for num in nums:
-    val = num ^ ebp ^ ebx
-    ebx ^= val
-    vals.append(val)
-
-vals = reversed(vals)
-
-with open('result.pdf', 'wb') as f:
-    for val in vals:
-        f.write(val.to_bytes(4, 'little'))
-```
+Apparently, these lines of code is reversible. Thus, we can write a short [Python script](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage4/generate_pdf.py) that produces these mysterious values.
 
 Result:
 
@@ -545,7 +510,7 @@ Like the hint says, it produces a pdf file.
 
 ## Step 5
 
-The last step is to open the [pdf](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/step4/challenge.pdf) directly. If you open the pdf file (with pdf readers that support javascript):
+The last step is to open the [pdf](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage4/challenge.pdf) directly. If you open the pdf file (with pdf readers that support javascript):
 
 ![](https://i.imgur.com/weQjj6M.png)
 
@@ -555,9 +520,9 @@ Indeed, if you open the pdf with notepad directly:
 
 ![](https://i.imgur.com/mG4IotN.png)
 
-You'll find some [javascript](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/step5/obfuscated.js) in it. Clearly, our next goal is to extract the script and analyze it.
+You'll find some [javascript](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage5/obfuscated.js) in it. Clearly, our next goal is to extract the script and analyze it.
 
-After beautifying and deobfuscating the javascript, you may obtain some [more readable code](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/step5/deobfuscated.js) similar to the following:
+After beautifying and deobfuscating the javascript, you may obtain some [more readable code](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage5/deobfuscated.js) similar to the following:
 
 ```javascript=
 function I(a, m) {
@@ -691,55 +656,7 @@ This line of code multiplies two values: `L(f.substring(i * 4, (i + 1) * 4))` an
 
 Conspicuously, the multiplication and the multiplicative inverse are both reversible, so looking for the flag directly from the values given is accomplishable.
 
-Let's write some [code](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/step5/generate_flag.js) to generate the flag:
-
-```javascript
-function inverse(a, m) {
-    a = (a % m + m) % m
-    const s = []
-    let b = m
-    while(b) {
-        [a, b] = [b, a % b]
-        s.push({a, b})
-    }
-    let x = 1, y = 0;
-    for(let i = s.length - 2; i >= 0; --i) {
-        [x, y] = [y,  x - y * Math.floor(s[i].a / s[i].b)]
-    }
-    return (y % m + m) % m
-}
-
-function int2str(number) {
-    let res = ''
-    for (let i = 0; i < 4; i++) {
-        res += String.fromCharCode(number % 256);
-        number = Math.floor(number / 256);
-    }
-    return res;
-};
-
-flag = 'TSJ{???????????????????????????????????????????????????????????????????????????????}';
-
-let nums = [
-    2068468564, 1144603696600,
-    831478994210,  629359373248,
-    962184141402, 2206207759242,
-    1393400813805,  336381623280,
-    1421359083024, 2441743882028,
-    2558614409999, 1105978251008,
-    1087127517945, 1042393394390,
-    1305482878903,  155110533693,
-    701269297290,  138410330303,
-    1302287084697, 1167918982880
-]
-
-let primes = [1381, 1399, 1409, 1423, 1427, 1429, 1433, 1439, 1447, 1451, 1453, 1459, 1471, 1481, 1483, 1487, 1489, 1493, 1499, 1511];
-let result = ''
-for (let i = 0; i < 20; i++) {
-    result += int2str(nums[i] / inverse(i + 1, primes[i]));
-}
-console.log(result)
-```
+Let's write some [code](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/on10n/stage5/generate_flag.js) to generate the flag.
 
 Result: `TSJ{javascript_in_pdf_in_shellcode_in_powershell_in_visual_basic_in_executable_f`
 

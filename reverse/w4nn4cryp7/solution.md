@@ -148,7 +148,7 @@ However, how do we know which encryption scheme it is using? Is it AES, RC5, or 
 
 It's hard to understand it without deep-diving. However, it is possible to figure it out by some experiments. We can just find some `txt` files in the infected C drive, decrypt it, and check whether the file makes sense or not.
 
-You may check out `test.cpp` for more information.
+You may check out [test.cpp](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/w4nn4cryp7/code/test.cpp) for more information.
 
 Result:
 
@@ -192,7 +192,7 @@ Testing RC6 CFB
 
 Clearly, only `RC6` with `CBC` mode produces texts that make sense.
 
-In other words, we have high confidence that the malware is using RC6 CBC mode, so we can finally write a decryptor that decrypts the whole filesystem.
+In other words, we have high confidence that the malware is using RC6 CBC mode, so we can finally write a [decryptor](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/w4nn4cryp7/code/decryptor.cpp) that decrypts the whole filesystem.
 
 See `decryptor.cpp` for the full code.
 

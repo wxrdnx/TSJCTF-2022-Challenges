@@ -11,10 +11,10 @@ There are two kinds of Javascript virtual machines. Those who understand Javascr
 # Solution
 This is a beginner-level, traditional virtual machine reverse problem. The source code of the virtual machine is provided [here](https://github.com/francisrstokes/16bitjs).
 
-The first to do is write a disassembler that helps you generate the disassembly. Since the Github page of the virtual machine is available, writing the disassembler becomes less difficult. In addition, you can try to use the source code of the virtual machine to speed up writing assembly. `disassembler.js` is a sample disassembly script that I wrote.
+The first to do is write a disassembler that helps you generate the disassembly. Since the Github page of the virtual machine is available, writing the disassembler becomes less difficult. In addition, you can try to use the source code of the virtual machine to speed up writing assembly. [disassembler.js](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/javascript_vm/code/disassembler.js) is a sample disassembly script that I wrote.
 
 
-If nothing goes wrong, you'll probably get some assembly code similar to `disassembly.txt`.
+If nothing goes wrong, you'll probably get some assembly code similar to [disassembly.txt](https://github.com/wxrdnx/TSJCTF-2022-Writeups/blob/main/reverse/javascript_vm/code/disassembly.txt).
 
 Next, translate this assembly code into pseudocode (Python).
 
