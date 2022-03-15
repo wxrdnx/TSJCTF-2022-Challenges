@@ -70,7 +70,7 @@ Anyhow, after scrolling down a little bit, we may discover even more strings tha
 
 Nevertheless, several strings after those Lua-related strings are quite boring, because they might be strings that come from libc. So from now on, we can continue and move on to real static analysis.
 
-## Static Analysis (`ghidra`)
+### Static Analysis (`ghidra`)
 
 The first thing you'll notice is that since this binary is stripped, it is impossible to stop our main function.
 Luckily, we may use "cross-reference" to locate our main function.
@@ -78,11 +78,9 @@ When the binary is executed, the string `URL to open: ` is printed, so we may cr
 
 ![](https://i.imgur.com/hiGegGG.png)
 
-![](https://i.imgur.com/6qhpBoM.png)
+(Goto 0x1e9758 & Press Ctrl-Shift-F on `DAT_001e9758`)
 
-(Press Ctrl-Shift-F on `DAT_001e9758`)
-
-![](https://i.imgur.com/K9aKR1n.png)
+![](https://i.imgur.com/pNvs99r.png)
 
 (Press Ctrl-Shift-F on `FUN_0010cab4`)
 
@@ -128,9 +126,9 @@ Notice the `rt_sigprocmask` and `rt_sigaction` functions before `write`? The res
 
 In addition, `kill -l SIGTRAP` indicates that the signal number of `SIGTRAP` is 5. Sounds familiar, right?
 
-So all in all, we can boldly speculate that `FUN_0014a5e0` handles signal registration. More precisely, `FUN_0014a5e0` might simply be the `signal` function.
+So all in all, we can boldly speculate that `FUN_0014a5e0` handles signal registration. More precisely, `FUN_0014a5e0` might simply be the `signal` function (since the function signature matches exactly).
 
-### `FUN_0010cab4`
+#### `FUN_0010cab4`
 
 ```c
 
@@ -164,7 +162,7 @@ void FUN_0010cab4(void)
 
 This function seems like the one that tells you to enter the URL. It's not important, so I'll skip it. Let's rename it to `get_url` and move on.
 
-### `FUN_0010cefc`
+#### `FUN_0010cefc`
 
 ```c
 void FUN_0010cefc(void)
@@ -182,19 +180,19 @@ void FUN_0010cefc(void)
 
 This one is really uncanny. We see that `FUN_0010cefc` calls `SoftwareBreakpoint`. `SoftwareBreakpoint` suggests that `FUN_0010cefc` intentionally pause the program and enter debugging process. We know that `SIGTRAP` is registered with a signal handler at `FUN_0010ccdc`. So from now on, the process will enter `FUN_0010ccdc`. I'll just name `FUN_0010cefc` as `trampoline`, and `FUN_0010ccdc` as `real_main`.
 
-Obviously, our next goal is to analyze `trampoline`
+Obviously, our next goal is to analyze `real_main`
 
-### `real_main`
+#### `real_main`
 
-This section of the code is the hardest to analyze. From the hint, we may know that this function execute LUA. However, it is nearly impossible to tell which lua function is called becuase the binary is stripped.
+This section of the code is the hardest to analyze. From the hint, we may know that this function execute Lua. However, it is nearly impossible to tell which lua function is called becuase the binary is stripped.
 
 The trick here is that there must be some hidden lua command (string) concealed in the binary. If we were able to locate the lua commands, we can understand the function better. However, we may notice that the `strings` command clearly has shown us that there were no strings that resemble lua command string. This implies that these commands might have be encoded or encrypted.
 
 Another trick is to skip analyzing library functions and focus on local function. In other words, we can concentrate on functions that nears `main` according to the locality rule. 
 
-`FUN_0010c794` seems promising, so let's examine it
+In brief, `FUN_0010c794` seems promising, so let's examine it:
 
-### `FUN_0010c794`
+#### `FUN_0010c794`
 
 ```c
 
@@ -224,7 +222,7 @@ void FUN_0010c794(long param_1,int param_2)
 }
 ```
 
-Well, this function is quite amusing because it grabs two parameters `param_1` and `param_2` and do a bunch of encoding-like operations. So we can rename this function to `decode` for the sake of clearity.
+This function is quite amusing because it grabs two parameters (`param_1` & `param_2) and do a bunch of decoding-like operations. So we can rename this function to `decode` for the sake of clearity.
 
 Back to `real_main`. We may notice that `param1` is basically `DAT_0024d258`, which refers to some structures in the `.bss` section. `param2` is `(long)*(int *)(&DAT_001e96d0 + (long)i * 4)`. Due to `(int *)`, you may guess that `DAT_001e96d0` is an array of integer. Moreover, `local_4` is a local variable in a for loop, so let's rename it to `i` for convention.
 
@@ -242,26 +240,23 @@ After renaming and changing types of some functions and variables, we may get th
 ...
 ```
 
-### `thunk_EXT_FUN_0000c300`
+#### `thunk_EXT_FUN_0000c300`
 
-Before `FUN_0010c794`, there's a strange function called `thunk_EXT_FUN_0000c300`. Notice that `thunk_EXT_FUN_0000c300` consumes three parameters: `global_buffer`, `PTR_DAT_0024b070[i]`, and `some_int_arra[i]`. `PTR_DAT_0024b070` looks like an array of pointer, so let's examine it
+Above `FUN_0010c794`, there's a strange function called `thunk_EXT_FUN_0000c300`. Notice that `thunk_EXT_FUN_0000c300` consumes three parameters: `global_buffer`, `PTR_DAT_0024b070[i]`, and `some_int_arra[i]`. `PTR_DAT_0024b070` looks like an array of pointer, so let's examine it
 
 ![](https://i.imgur.com/kMd8rYi.png)
 
-
-Note that `PTR_DAT_0024b070` is also an array of 9 elements, and this perfectly matches up with the for loop.
+Note that `PTR_DAT_0024b070` is also an array of 9 elements, and this perfectly tallies with up with the for loop.
 
 Next, let's take a look at some pointers in the array:
 
 ![](https://i.imgur.com/qq3xSnj.png)
 
-You can see that it is a character array consists of random-looking bytes.
-
-Furthermore, notice that the string length of `DAT_001b29b8` is 0x70, and the string length of `DAT_001b2a30` is 0x38. This indicates that the `some_int_arra[i]` is actually the length of each string! Let's rename `PTR_DAT_0024b070` to `strings` and `some_int_arra` to `lengths`.
+You can see that it is a character array consists of random-looking bytes. Furthermore, notice that the string length of `DAT_001b29b8` is 0x70, and the string length of `DAT_001b2a30` is 0x38. This indicates that the `some_int_arra[i]` is actually the length of each string! Let's rename `PTR_DAT_0024b070` to `strings` and `some_int_array` to `lengths`.
 
 Back to function `thunk_EXT_FUN_0000c300`. This function's first parameter is a buffer, the second parameter is `strings[i]`, and the third parameter is `lengths[i]`. Undoubtedly, `thunk_EXT_FUN_0000c300` is `memcpy`.
 
-After renaming some variables and functions:
+Renaming some variables and functions yields something similar to the below pseudo C code:
 
 ```c
   for (i = 0; i < 9; i = i + 1) {
@@ -269,15 +264,15 @@ After renaming some variables and functions:
     decode(&global_buffer,lengths[i]);
 ```
 
-From now on, we can move on and really decode these strings.
+Clearly, our next mission is to decode these strings.
 
 
 ### decode strings
 
-We can write a Python program that helps us decode the string.
-First, grab all 9 of these bytes out. Then, emulate the decoding process in the `decode` function. Finally, print the result out.
+We can write a Python program that helps us decode these bytes.
+First, grab all 9 of these encoded strings out. Then, emulate the `decode` function. Finally, print the result out.
 
-You may find my script [here](https://github.com/wxrdnx/TSJCTF-2022-Writeups/tree/main/reverse/rabbit_and_the_moon/code/decode_string.py)
+You may find my script [here](https://github.com/wxrdnx/TSJCTF-2022-Writeups/tree/main/reverse/rabbit_and_the_moon/code/decode.py)
 
 ```python
 strings = [...]
@@ -296,7 +291,7 @@ with open('result.lua', 'wb') as f:
         f.write(result)
 ```
 
-Result:
+Result (full result [here](https://github.com/wxrdnx/TSJCTF-2022-Writeups/tree/main/reverse/rabbit_and_the_moon/code/result.lua)):
 
 ```lua
 function l8dNr5HTj2()
@@ -329,17 +324,17 @@ Indeed, the `decode` function generates a bunch of Lua scripts!
 
 From now on, it is clear that we should analyze the Lua functions.
 
-## Analyze Lua
+### Analyze Lua
 
-### `l8dNr5HTj2`
+#### `l8dNr5HTj2`
 
 This function writes `password:` to standard output, read a string `s`, and check whether the length of `s` equals 64. This means that the password is 64 bytes long. Let's rename `l8dNr5HTj2` to `read_passwd`.
 
-### `ulPOQcl9MK` and `NFAHPwzl8k`
+#### `ulPOQcl9MK` and `NFAHPwzl8k`
 
 Prints two different strings. It's fair to guess that if the password is correct, `NFAHPwzl8k` will be invoked. Otherwise, `ulPOQcl9MK` will be called instead. Let's rename it to `print_success` and `print_error` respectively.
 
-### `Ye0OFItZzM` ~ `WqcQnf77B2`
+#### `Ye0OFItZzM` ~ `WqcQnf77B2`
 
 These functions are extremely convoluted and inscrutable. Nevertheless, remember that the hint tells us the binary has something to do with rabbit stream cipher? <del>You can guess that the author of this challenge is lazy and perhaps copy the implementation from somewhere on github</del>. If you search for `Lua cipher` on GitHub, you may find [this](https://github.com/philanc/plc/blob/master/plc/rabbit.lua) implementation. You'll notice that the implementation of these Lua functions is extremely similar. So let's rename them one by one:
 
@@ -353,14 +348,14 @@ WqcQnf77B2 -> crypt
 
 The only noticeable difference is that the `crypt` function returns `string.format('%04x:%04x:...', XmbF7, XmbF6, ...)`. Remember the four mac addresses that we found via `strings` command? From now on, you can confidently assume that these four mac addresses are related to the encryption/decryption of the rabbit cipher.
 
-### `lCfN458cIw`
+#### `lCfN458cIw`
 
 This function prints a long string, XORs `c7Ai3dlP` with `IApFgSuv`, and generates `Hws8YOCX`. Eventually, it prints `"Flag:" .. Hws8YOCX`.
 
 This function is really important because it looks like a flag-generating function.
 
 
-## Back to `real_main`
+### Back to `real_main`
 
 We've finished browsing through the lua codes. Let's continue looking for functions close to `main`. 
 
@@ -527,7 +522,7 @@ undefined8 FUN_0010c928(undefined8 param_1,undefined8 param_2,undefined8 param_3
 
 It calls several functions regarding rabbit cipher. In fact, it calls each of the 5 rabbit cipher Lua functions in order. So we may conclude that this function performs encryption/decryption. Also, when it calls `JqFUieXRef` (`keysetup`), `param_3` is used, and when it calls `CSqPQhS1p3` (`ivsetup`), `param_4` is used. Presumably, `param_3` is the key and `param_4` is the iv. Let's name both of these arrays as `keys` and `ivs`.
 
-### `FUN_0010cbc4`, `FUN_0010cb68`, and `FUN_0010cc2`
+#### `FUN_0010cbc4`, `FUN_0010cb68`, and `FUN_0010cc2`
 
 `FUN_0010cbc4` is also a function that is located near `main`. Observe that inside the function, it calls `ulPOQcl9M` (`print_error`). So `FUN_0010cbc4` is the function that prints `permission failed`. Similarly, `FUN_0010cb68` calls `NFAHPwzl8k` (`print_success`), so it is the function that prints `permission granted`.
 
@@ -561,11 +556,11 @@ So the encryption/decryption process works as follows:
 
 Apparently, our last goal is to decrypt the secret password.
 
-## Obtain the password
+### Obtain the password
 
-We all know that the encryption and decryption of stream ciphers are the same. In addition, the keys and ivs are known. Thus, it is not difficult to write a script that decrypts the mysterious MAC addresses. See [decrypt.lua](https://github.com/wxrdnx/TSJCTF-2022-Writeups/tree/main/reverse/rabbit_and_the_moon/code/chall_patched/decrypt.lua) for the whole script.
+We all know that the encryption and decryption of stream ciphers are the same. In addition, the keys and ivs are known. Thus, it is not difficult to write a script that decrypts the mysterious MAC addresses. See [decrypt.lua](https://github.com/wxrdnx/TSJCTF-2022-Writeups/tree/main/reverse/rabbit_and_the_moon/code/decrypt.lua) for the whole script.
 
-```lua=
+```lua
 ...
 function solve ()
     local keys = {
@@ -614,7 +609,6 @@ $ lua decrypt.lua
 
 Finally, enter the password and get the flag!!!
 ![](https://i.imgur.com/qoRaqDu.png)
-
 
 ![](https://i.imgur.com/d1IBqgm.png)
 
