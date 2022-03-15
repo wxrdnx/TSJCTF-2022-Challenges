@@ -424,7 +424,7 @@ Therefore, change the opcode at 0xcf2c from 0xf4 to 0x6c:
 
 I'll name the patched program as [`chall_patched`](https://github.com/wxrdnx/TSJCTF-2022-Writeups/tree/main/reverse/rabbit_and_the_moon/code/chall_patched). 
 
-Anyway, we can debug as usual. Type `qemu-aarch64 -g 1234 ./chall_patched` on one terminal, `gdb-multiarch` on another one, enter `target remote localhost:1234`, and start debugging!
+Anyway, we can debug as usual now. Type `qemu-aarch64 -g 1234 ./chall_patched` on one terminal, `gdb-multiarch` on another one, enter `target remote localhost:1234`, and start debugging!
 
 ![](https://i.imgur.com/RIRACVE.png)
 
