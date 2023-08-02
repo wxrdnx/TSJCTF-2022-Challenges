@@ -1,1 +1,1 @@
-# TSJCTF-2022-Writeups
+# TSJCTF-2022-Challenges
